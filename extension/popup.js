@@ -1,16 +1,31 @@
 "use strict";
 
 const STORAGE_KEY = "volumePercent";
+const GAIN_EVENT = "__volumeBoosterSetGain";
+
 const slider = document.getElementById("volumeSlider");
 const valueLabel = document.getElementById("valueLabel");
-
-function percentToGain(percent) {
-  return percent / 100;
-}
 
 function updateLabel(percent) {
   valueLabel.textContent = `${percent}%`;
   slider.setAttribute("aria-valuenow", String(percent));
+}
+
+/**
+ * tabs.sendMessage only hits the top frame by default. W3Schools / many sites
+ * play media inside iframes; we broadcast with executeScript so every frame
+ * receives the same CustomEvent in the extension isolated world.
+ */
+function broadcastGainToAllFrames(tabId, percent, gain) {
+  const detailJson = JSON.stringify({ percent, gain });
+  const code = `document.dispatchEvent(new CustomEvent(${JSON.stringify(
+    GAIN_EVENT
+  )},{detail:${detailJson}}));`;
+  return browser.tabs.executeScript(tabId, {
+    allFrames: true,
+    matchAboutBlank: true,
+    code,
+  });
 }
 
 function saveAndNotifyTab(percent) {
@@ -19,14 +34,12 @@ function saveAndNotifyTab(percent) {
 
   browser.tabs.query({ active: true, currentWindow: true }).then((tabs) => {
     const tab = tabs[0];
-    if (!tab || tab.id === undefined) {
+    if (tab == null || tab.id === undefined) {
       return;
     }
-    browser.tabs
-      .sendMessage(tab.id, { type: "SET_GAIN", percent, gain })
-      .catch(() => {
-        /* tab may not allow scripts or have no content script */
-      });
+    broadcastGainToAllFrames(tab.id, percent, gain).catch(() => {
+      /* restricted URLs, etc. */
+    });
   });
 }
 
