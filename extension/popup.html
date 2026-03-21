@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Volume Booster</title>
+    <link rel="stylesheet" href="popup.css" />
+  </head>
+  <body>
+    <header class="header">
+      <h1 class="title">Volume Booster</h1>
+    </header>
+    <main class="main">
+      <p class="value-label" id="valueLabel" aria-live="polite">100%</p>
+      <div class="slider-wrap">
+        <input
+          type="range"
+          id="volumeSlider"
+          class="volume-slider"
+          min="100"
+          max="500"
+          step="1"
+          value="100"
+          aria-valuemin="100"
+          aria-valuemax="500"
+          aria-valuenow="100"
+          aria-label="Volume boost percentage"
+        />
+        <div class="slider-ticks">
+          <span>100%</span>
+          <span>300%</span>
+          <span>500%</span>
+        </div>
+      </div>
+    </main>
+    <script src="popup.js"></script>
+  </body>
+</html>
