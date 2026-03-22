@@ -11,7 +11,7 @@
  *   +6 dB vs 100%, which usually does not feel like “twice as loud.” A modest
  *   exponent (>1) raises mid/high settings so steps feel closer to the label.
  */
-const NATIVE_MATCH_GAIN = 0.88;
+const NATIVE_MATCH_GAIN = 0.6;
 const PERCENT_CURVE_EXPONENT = 1.08;
 
 function percentToGain(percent) {
