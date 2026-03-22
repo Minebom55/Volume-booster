@@ -1,4 +1,4 @@
-**Disclaimer** this extention and reposatory is 99% AI generated do with that what you will
+# **Disclaimer** this extention and reposatory is 99% AI generated do with that what you will
 
 # 🔊 Volume Booster — Firefox Extension
 
