@@ -17,6 +17,9 @@ body {
 .header {
   padding: 14px 16px 8px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
 }
 
 .title {
@@ -29,6 +32,30 @@ body {
 
 .main {
   padding: 16px 18px 20px;
+}
+
+.panel {
+  display: none;
+}
+
+.active-panel {
+  display: block;
+}
+
+.icon-button {
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.08);
+  color: #e8eaed;
+  width: 30px;
+  height: 30px;
+  line-height: 1;
+  font-size: 16px;
+  cursor: pointer;
+}
+
+.icon-button:hover {
+  background: rgba(255, 255, 255, 0.14);
 }
 
 .value-label {
@@ -105,4 +132,104 @@ body {
   font-size: 11px;
   color: #868e96;
   user-select: none;
+}
+
+.settings-top {
+  margin-bottom: 12px;
+}
+
+.back-button {
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.08);
+  color: #e8eaed;
+  padding: 6px 10px;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.back-button:hover {
+  background: rgba(255, 255, 255, 0.14);
+}
+
+.setting-item {
+  margin-bottom: 12px;
+}
+
+.setting-label {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 6px;
+  color: #cfd4da;
+  font-size: 12px;
+  position: relative;
+}
+
+.setting-input {
+  width: 100%;
+  padding: 7px 9px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: rgba(0, 0, 0, 0.25);
+  color: #f1f3f5;
+}
+
+.tooltip-wrap {
+  position: relative;
+  margin-left: 8px;
+}
+
+.help-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  font-size: 11px;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  color: #cfd4da;
+  cursor: default;
+}
+
+.tooltip-text {
+  position: absolute;
+  right: 0;
+  bottom: calc(100% + 8px);
+  width: 220px;
+  padding: 8px;
+  border-radius: 8px;
+  background: #1d2230;
+  color: #dbe1ea;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  font-size: 11px;
+  line-height: 1.35;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.38);
+  visibility: hidden;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+  pointer-events: none;
+  z-index: 20;
+}
+
+.tooltip-wrap:hover .tooltip-text,
+.tooltip-wrap:focus-within .tooltip-text {
+  visibility: visible;
+  opacity: 1;
+}
+
+.secondary-button {
+  width: 100%;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.07);
+  color: #dbe1ea;
+  padding: 8px 10px;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.secondary-button:hover {
+  background: rgba(255, 255, 255, 0.12);
 }

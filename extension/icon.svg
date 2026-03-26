@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Volume Booster icon">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#2b3240" />
+      <stop offset="100%" stop-color="#171b24" />
+    </linearGradient>
+    <linearGradient id="speaker" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#9fc0ff" />
+      <stop offset="100%" stop-color="#638dff" />
+    </linearGradient>
+  </defs>
+  <rect x="2" y="2" width="60" height="60" rx="14" fill="url(#bg)" />
+  <path
+    d="M14 36V28C14 26.9 14.9 26 16 26H24L33 18C34.3 16.9 36.3 17.8 36.3 19.6V44.4C36.3 46.2 34.3 47.1 33 46L24 38H16C14.9 38 14 37.1 14 36Z"
+    fill="url(#speaker)"
+  />
+  <path d="M42 26C45.3 29.3 45.3 34.7 42 38" fill="none" stroke="#b8ccff" stroke-width="3" stroke-linecap="round" />
+  <path d="M47 22C52.5 27.5 52.5 36.5 47 42" fill="none" stroke="#9db8ff" stroke-width="3" stroke-linecap="round" />
+</svg>

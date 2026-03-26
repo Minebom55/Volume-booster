@@ -1,7 +1,7 @@
 {
   "manifest_version": 2,
   "name": "Volume Booster",
-  "version": "1.0.2",
+  "version": "1.1.0",
   "description": "Boost webpage audio and video volume beyond 100% using the Web Audio API.",
   "browser_specific_settings": {
     "gecko": {
@@ -13,9 +13,16 @@
     }
   },
   "permissions": ["activeTab", "tabs", "storage"],
+  "icons": {
+    "48": "icon.svg",
+    "96": "icon.svg"
+  },
   "browser_action": {
     "default_title": "Volume Booster",
-    "default_popup": "popup.html"
+    "default_popup": "popup.html",
+    "default_icon": {
+      "32": "icon.svg"
+    }
   },
   "content_scripts": [
     {

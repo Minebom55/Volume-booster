@@ -9,29 +9,90 @@
   <body>
     <header class="header">
       <h1 class="title">Volume Booster</h1>
+      <button
+        id="settingsToggle"
+        class="icon-button"
+        type="button"
+        aria-label="Open settings"
+        title="Settings"
+      >
+        ⚙
+      </button>
     </header>
     <main class="main">
-      <p class="value-label" id="valueLabel" aria-live="polite">100%</p>
-      <div class="slider-wrap">
-        <input
-          type="range"
-          id="volumeSlider"
-          class="volume-slider"
-          min="100"
-          max="500"
-          step="1"
-          value="100"
-          aria-valuemin="100"
-          aria-valuemax="500"
-          aria-valuenow="100"
-          aria-label="Volume boost percentage"
-        />
-        <div class="slider-ticks">
-          <span>100%</span>
-          <span>300%</span>
-          <span>500%</span>
+      <section id="mainPanel" class="panel active-panel">
+        <p class="value-label" id="valueLabel" aria-live="polite">100%</p>
+        <div class="slider-wrap">
+          <input
+            type="range"
+            id="volumeSlider"
+            class="volume-slider"
+            min="100"
+            max="500"
+            step="1"
+            value="100"
+            aria-valuemin="100"
+            aria-valuemax="500"
+            aria-valuenow="100"
+            aria-label="Volume boost percentage"
+          />
+          <div class="slider-ticks">
+            <span>100%</span>
+            <span>300%</span>
+            <span>500%</span>
+          </div>
         </div>
-      </div>
+      </section>
+      <section id="settingsPanel" class="panel" aria-hidden="true">
+        <div class="settings-top">
+          <button id="settingsBack" class="back-button" type="button">← Back</button>
+        </div>
+        <div class="setting-item">
+          <label class="setting-label" for="nativeMatchGainInput">
+            Native Match Gain
+            <span class="tooltip-wrap">
+              <span class="help-badge" tabindex="0">?</span>
+              <span class="tooltip-text">
+                Adjusts the gain applied at 100% volume to match the page's native audio level. Increase if audio sounds too quiet at 100%.
+              </span>
+            </span>
+          </label>
+          <input
+            id="nativeMatchGainInput"
+            class="setting-input"
+            type="number"
+            min="0.1"
+            max="5.0"
+            step="0.1"
+            value="1.0"
+            aria-label="Native match gain"
+          />
+        </div>
+        <div class="setting-item">
+          <label class="setting-label" for="curveExponentInput">
+            Curve Exponent
+            <span class="tooltip-wrap">
+              <span class="help-badge" tabindex="0">?</span>
+              <span class="tooltip-text">
+                Controls how aggressively the volume increases as you move the slider. Higher values make the upper range more powerful. Lower values give a more linear feel.
+              </span>
+            </span>
+          </label>
+          <input
+            id="curveExponentInput"
+            class="setting-input"
+            type="number"
+            min="1.0"
+            max="5.0"
+            step="0.1"
+            value="2.0"
+            aria-label="Curve exponent"
+          />
+        </div>
+        <button id="resetDefaultsBtn" class="secondary-button" type="button">
+          Reset to Defaults
+        </button>
+      </section>
     </main>
     <script src="gain-map.js"></script>
     <script src="popup.js"></script>

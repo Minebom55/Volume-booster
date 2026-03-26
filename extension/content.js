@@ -1,10 +1,14 @@
 "use strict";
 
 const STORAGE_KEY = "volumePercent";
+const NATIVE_MATCH_GAIN_KEY = "nativeMatchGain";
+const CURVE_EXPONENT_KEY = "curveExponent";
 const GAIN_EVENT = "__volumeBoosterSetGain";
 
 let audioContext = null;
 let currentGain = 1;
+let currentPercent = 100;
+let currentSettings = normalizeGainSettings(DEFAULT_SETTINGS);
 /** @type {WeakMap<HTMLMediaElement, GainNode>} */
 const elementGainNodes = new WeakMap();
 /** @type {Set<GainNode>} */
@@ -70,10 +74,15 @@ function applyGainFromPayload(detail) {
     return;
   }
   if (typeof detail.gain === "number" && Number.isFinite(detail.gain)) {
-    currentGain = detail.gain;
+    currentGain = Number(detail.gain);
   } else if (typeof detail.percent === "number") {
     const clamped = Math.min(500, Math.max(100, Number(detail.percent)));
-    currentGain = percentToGain(clamped);
+    currentPercent = clamped;
+    currentGain = percentToGain(clamped, currentSettings);
+  }
+  if (detail.settings) {
+    currentSettings = normalizeGainSettings(detail.settings);
+    currentGain = percentToGain(currentPercent, currentSettings);
   }
   resumeContextIfNeeded();
   applyGainToAllNodes();
@@ -219,14 +228,53 @@ function initFromStorage() {
     observeNewMedia();
     window.setInterval(scanDocumentMedia, 1500);
   }
-  browser.storage.local.get(STORAGE_KEY).then((stored) => {
+  browser.storage.local
+    .get([STORAGE_KEY, NATIVE_MATCH_GAIN_KEY, CURVE_EXPONENT_KEY])
+    .then((stored) => {
     const v = stored[STORAGE_KEY];
     if (typeof v === "number" && v >= 100 && v <= 500) {
-      currentGain = percentToGain(Math.round(v));
+      currentPercent = Math.round(v);
     }
+    currentSettings = normalizeGainSettings({
+      nativeMatchGain: stored[NATIVE_MATCH_GAIN_KEY],
+      curveExponent: stored[CURVE_EXPONENT_KEY],
+    });
+    currentGain = percentToGain(currentPercent, currentSettings);
     applyGainToAllNodes();
   });
 }
+
+browser.storage.onChanged.addListener((changes, areaName) => {
+  if (areaName !== "local") {
+    return;
+  }
+  let shouldRecalc = false;
+  if (
+    changes[STORAGE_KEY] &&
+    typeof changes[STORAGE_KEY].newValue === "number"
+  ) {
+    currentPercent = Math.min(
+      500,
+      Math.max(100, Math.round(changes[STORAGE_KEY].newValue))
+    );
+    shouldRecalc = true;
+  }
+  if (changes[NATIVE_MATCH_GAIN_KEY] || changes[CURVE_EXPONENT_KEY]) {
+    currentSettings = normalizeGainSettings({
+      nativeMatchGain: changes[NATIVE_MATCH_GAIN_KEY]
+        ? changes[NATIVE_MATCH_GAIN_KEY].newValue
+        : currentSettings.nativeMatchGain,
+      curveExponent: changes[CURVE_EXPONENT_KEY]
+        ? changes[CURVE_EXPONENT_KEY].newValue
+        : currentSettings.curveExponent,
+    });
+    shouldRecalc = true;
+  }
+  if (shouldRecalc) {
+    currentGain = percentToGain(currentPercent, currentSettings);
+    applyGainToAllNodes();
+  }
+});
 
 if (document.readyState === "loading") {
   document.addEventListener("DOMContentLoaded", initFromStorage, {
