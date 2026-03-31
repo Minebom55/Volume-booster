@@ -4,8 +4,6 @@ const STORAGE_KEY = "volumePercent";
 const NATIVE_MATCH_GAIN_KEY = "nativeMatchGain";
 const CURVE_EXPONENT_KEY = "curveExponent";
 const GAIN_EVENT = "__volumeBoosterSetGain";
-const DEBUG_ENDPOINT = "http://127.0.0.1:7712/ingest/f058744e-7698-441d-82d2-5ec078e34a2d";
-const DEBUG_SESSION = "006059";
 
 let audioContext = null;
 let currentGain = 1;
@@ -17,28 +15,6 @@ const elementGainNodes = new WeakMap();
 const gainNodes = new Set();
 /** @type {WeakSet<HTMLMediaElement>} */
 const skipWireMedia = new WeakSet();
-
-function debugLog(runId, hypothesisId, location, message, data) {
-  if (globalThis.__VB_DEBUG_ENABLED !== true) {
-    return;
-  }
-  fetch(DEBUG_ENDPOINT, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "X-Debug-Session-Id": DEBUG_SESSION,
-    },
-    body: JSON.stringify({
-      sessionId: DEBUG_SESSION,
-      runId,
-      hypothesisId,
-      location,
-      message,
-      data,
-      timestamp: Date.now(),
-    }),
-  }).catch(() => {});
-}
 
 function safeErrorMessage(err) {
   try {
@@ -97,21 +73,6 @@ function applyGainFromPayload(detail) {
   if (!detail) {
     return;
   }
-  // #region agent log
-  debugLog(
-    "pre-fix",
-    "H1",
-    "content.js:applyGainFromPayload",
-    "payload received",
-    {
-      hasPercent: typeof detail.percent === "number",
-      hasGain: typeof detail.gain === "number",
-      hasSettings: Boolean(detail.settings),
-      currentPercentBefore: currentPercent,
-      currentGainBefore: currentGain,
-    }
-  );
-  // #endregion
   if (typeof detail.gain === "number" && Number.isFinite(detail.gain)) {
     currentGain = Number(detail.gain);
   } else if (typeof detail.percent === "number") {
@@ -123,20 +84,6 @@ function applyGainFromPayload(detail) {
     currentSettings = normalizeGainSettings(detail.settings);
     currentGain = percentToGain(currentPercent, currentSettings);
   }
-  // #region agent log
-  debugLog(
-    "pre-fix",
-    "H1",
-    "content.js:applyGainFromPayload",
-    "payload applied",
-    {
-      currentPercentAfter: currentPercent,
-      currentGainAfter: currentGain,
-      nativeMatchGain: currentSettings.nativeMatchGain,
-      curveExponent: currentSettings.curveExponent,
-    }
-  );
-  // #endregion
   resumeContextIfNeeded();
   applyGainToAllNodes();
 }
@@ -293,15 +240,6 @@ function initFromStorage() {
       curveExponent: stored[CURVE_EXPONENT_KEY],
     });
     currentGain = percentToGain(currentPercent, currentSettings);
-    // #region agent log
-    debugLog("pre-fix", "H4", "content.js:initFromStorage", "storage loaded", {
-      storedPercent: stored[STORAGE_KEY],
-      currentPercent,
-      nativeMatchGain: currentSettings.nativeMatchGain,
-      curveExponent: currentSettings.curveExponent,
-      currentGain,
-    });
-    // #endregion
     applyGainToAllNodes();
   });
 }
@@ -334,17 +272,6 @@ browser.storage.onChanged.addListener((changes, areaName) => {
   }
   if (shouldRecalc) {
     currentGain = percentToGain(currentPercent, currentSettings);
-    // #region agent log
-    debugLog("pre-fix", "H3", "content.js:storage.onChanged", "storage recalc", {
-      changedPercent: Boolean(changes[STORAGE_KEY]),
-      changedNativeMatchGain: Boolean(changes[NATIVE_MATCH_GAIN_KEY]),
-      changedCurveExponent: Boolean(changes[CURVE_EXPONENT_KEY]),
-      currentPercent,
-      nativeMatchGain: currentSettings.nativeMatchGain,
-      curveExponent: currentSettings.curveExponent,
-      currentGain,
-    });
-    // #endregion
     applyGainToAllNodes();
   }
 });

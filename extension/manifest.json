@@ -12,7 +12,7 @@
       }
     }
   },
-  "permissions": ["activeTab", "tabs", "storage", "http://127.0.0.1/*"],
+  "permissions": ["activeTab", "tabs", "storage"],
   "icons": {
     "48": "icon.svg",
     "96": "icon.svg"
