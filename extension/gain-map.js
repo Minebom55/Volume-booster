@@ -1,7 +1,8 @@
 "use strict";
 
-const DEFAULT_NATIVE_MATCH_GAIN = 1.0;
+const DEFAULT_NATIVE_MATCH_GAIN = 0.6;
 const DEFAULT_CURVE_EXPONENT = 2.0;
+globalThis.__VB_DEBUG_ENABLED = false;
 
 const DEFAULT_SETTINGS = Object.freeze({
   nativeMatchGain: DEFAULT_NATIVE_MATCH_GAIN,

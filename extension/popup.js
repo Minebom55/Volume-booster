@@ -4,6 +4,8 @@ const STORAGE_KEY = "volumePercent";
 const NATIVE_MATCH_GAIN_KEY = "nativeMatchGain";
 const CURVE_EXPONENT_KEY = "curveExponent";
 const GAIN_EVENT = "__volumeBoosterSetGain";
+const DEBUG_ENDPOINT = "http://127.0.0.1:7712/ingest/f058744e-7698-441d-82d2-5ec078e34a2d";
+const DEBUG_SESSION = "006059";
 
 const slider = document.getElementById("volumeSlider");
 const valueLabel = document.getElementById("valueLabel");
@@ -17,6 +19,28 @@ const resetDefaultsBtn = document.getElementById("resetDefaultsBtn");
 
 let currentSettings = normalizeGainSettings(DEFAULT_SETTINGS);
 let currentPercent = 100;
+
+function debugLog(runId, hypothesisId, location, message, data) {
+  if (globalThis.__VB_DEBUG_ENABLED !== true) {
+    return;
+  }
+  fetch(DEBUG_ENDPOINT, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "X-Debug-Session-Id": DEBUG_SESSION,
+    },
+    body: JSON.stringify({
+      sessionId: DEBUG_SESSION,
+      runId,
+      hypothesisId,
+      location,
+      message,
+      data,
+      timestamp: Date.now(),
+    }),
+  }).catch(() => {});
+}
 
 function updateLabel(percent) {
   valueLabel.textContent = `${percent}%`;
@@ -62,10 +86,22 @@ function syncSettingsInputs(settings) {
   curveExponentInput.value = settings.curveExponent.toFixed(1);
 }
 
-function saveAndNotifyTab(percent, settings) {
+function saveAndNotifyTab(percent, settings, options) {
   const gain = percentToGain(percent, settings);
   const payloadSettings = normalizeGainSettings(settings);
-  browser.storage.local.set({ [STORAGE_KEY]: percent });
+  const opts = options || {};
+  if (opts.persistPercent) {
+    browser.storage.local.set({ [STORAGE_KEY]: percent });
+  }
+  // #region agent log
+  debugLog("post-fix", "H1", "popup.js:saveAndNotifyTab", "broadcast payload", {
+    percent,
+    gain,
+    persistPercent: Boolean(opts.persistPercent),
+    nativeMatchGain: payloadSettings.nativeMatchGain,
+    curveExponent: payloadSettings.curveExponent,
+  });
+  // #endregion
 
   browser.tabs.query({ active: true, currentWindow: true }).then((tabs) => {
     const tab = tabs[0];
@@ -82,17 +118,47 @@ function onSliderInput() {
   const percent = Number(slider.value);
   currentPercent = percent;
   updateLabel(percent);
-  saveAndNotifyTab(percent, currentSettings);
+  saveAndNotifyTab(percent, currentSettings, { persistPercent: false });
+}
+
+function onSliderChange() {
+  browser.storage.local.set({ [STORAGE_KEY]: currentPercent });
+  // #region agent log
+  debugLog("post-fix", "H3", "popup.js:onSliderChange", "persist slider percent", {
+    percent: currentPercent,
+  });
+  // #endregion
 }
 
 function onSettingsInput() {
   currentSettings = getSettingsFromInputs();
   syncSettingsInputs(currentSettings);
+  // #region agent log
+  debugLog("post-fix", "H2", "popup.js:onSettingsInput", "settings input parsed", {
+    nativeMatchGain: currentSettings.nativeMatchGain,
+    curveExponent: currentSettings.curveExponent,
+  });
+  // #endregion
+  saveAndNotifyTab(currentPercent, currentSettings, { persistPercent: false });
+}
+
+function onSettingsChange() {
   browser.storage.local.set({
     [NATIVE_MATCH_GAIN_KEY]: currentSettings.nativeMatchGain,
     [CURVE_EXPONENT_KEY]: currentSettings.curveExponent,
   });
-  saveAndNotifyTab(currentPercent, currentSettings);
+  // #region agent log
+  debugLog(
+    "post-fix",
+    "H3",
+    "popup.js:onSettingsChange",
+    "persist settings values",
+    {
+      nativeMatchGain: currentSettings.nativeMatchGain,
+      curveExponent: currentSettings.curveExponent,
+    }
+  );
+  // #endregion
 }
 
 function onResetDefaults() {
@@ -102,7 +168,7 @@ function onResetDefaults() {
     [NATIVE_MATCH_GAIN_KEY]: currentSettings.nativeMatchGain,
     [CURVE_EXPONENT_KEY]: currentSettings.curveExponent,
   });
-  saveAndNotifyTab(currentPercent, currentSettings);
+  saveAndNotifyTab(currentPercent, currentSettings, { persistPercent: false });
 }
 
 document.addEventListener("DOMContentLoaded", () => {
@@ -125,13 +191,16 @@ document.addEventListener("DOMContentLoaded", () => {
     slider.value = String(percent);
     updateLabel(percent);
     syncSettingsInputs(currentSettings);
-    saveAndNotifyTab(percent, currentSettings);
+    saveAndNotifyTab(percent, currentSettings, { persistPercent: true });
     setPanelState(false);
   });
 
   slider.addEventListener("input", onSliderInput);
+  slider.addEventListener("change", onSliderChange);
   nativeMatchGainInput.addEventListener("input", onSettingsInput);
+  nativeMatchGainInput.addEventListener("change", onSettingsChange);
   curveExponentInput.addEventListener("input", onSettingsInput);
+  curveExponentInput.addEventListener("change", onSettingsChange);
   resetDefaultsBtn.addEventListener("click", onResetDefaults);
   settingsToggle.addEventListener("click", () => {
     const opening = !settingsPanel.classList.contains("active-panel");

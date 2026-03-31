@@ -16,11 +16,20 @@ Firefox caps webpage volume at 100% natively. Volume Booster breaks that ceiling
 
 ---
 
-## 📦 Installation (from GitHub)
+## 📦 Installation
 
-### Option 1 — Temporary install (works on any Firefox, including stable)
+### Option 1 — Install from Firefox Add-ons (recommended)
 
-This is the quickest way to get started. The extension will stay active until you fully close Firefox.
+1. Open the add-on page:
+   [https://addons.mozilla.org/sv-SE/firefox/addon/500-volume-booster/](https://addons.mozilla.org/sv-SE/firefox/addon/500-volume-booster/)
+2. Select **Add to Firefox**.
+3. Confirm permissions and finish installation.
+
+This is the easiest and most stable method for normal use.
+
+---
+
+### Option 2 — Temporary install from this repository (development/testing)
 
 1. **Download or clone this repository**
 
@@ -35,42 +44,13 @@ This is the quickest way to get started. The extension will stay active until yo
    about:debugging#/runtime/this-firefox
    ```
 
-3. Click **"Load Temporary Add-on..."**
+3. Select **Load Temporary Add-on...**
 
 4. Navigate to the folder you downloaded and select the **`manifest.json`** file.
 
-5. The extension icon will appear in your Firefox toolbar. You're done!
+5. The extension icon appears in your Firefox toolbar.
 
-> ⚠️ Temporary installs are removed when Firefox fully closes. You'll need to re-add it after each restart. Use Option 2 for a permanent install.
-
----
-
-### Option 2 — Permanent install
-
-This makes the extension persist across restarts without needing to re-add it every time.
-
-1. Open Firefox and navigate to:
-   ```
-   about:config
-   ```
-
-2. Accept the warning if prompted.
-
-3. Search for:
-   ```
-   xpinstall.signatures.required
-   ```
-
-4. Double-click it to set the value to **`false`**.
-
-5. Now navigate to:
-   ```
-   about:debugging#/runtime/this-firefox
-   ```
-
-6. Click **"Load Temporary Add-on..."** and select the **`manifest.json`** file.
-
-7. The extension will now persist across Firefox restarts. ✅
+> Temporary installs are removed when Firefox fully closes and must be added again after restart.
 
 
 ---
