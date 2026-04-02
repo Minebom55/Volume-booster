@@ -3,6 +3,7 @@
 const STORAGE_KEY = "volumePercent";
 const NATIVE_MATCH_GAIN_KEY = "nativeMatchGain";
 const CURVE_EXPONENT_KEY = "curveExponent";
+const DISABLED_HOSTS_KEY = "disabledHosts";
 const GAIN_EVENT = "__volumeBoosterSetGain";
 
 const slider = document.getElementById("volumeSlider");
@@ -14,9 +15,13 @@ const settingsBack = document.getElementById("settingsBack");
 const nativeMatchGainInput = document.getElementById("nativeMatchGainInput");
 const curveExponentInput = document.getElementById("curveExponentInput");
 const resetDefaultsBtn = document.getElementById("resetDefaultsBtn");
+const siteEnabledToggle = document.getElementById("siteEnabledToggle");
+const siteStatusText = document.getElementById("siteStatusText");
 
 let currentSettings = normalizeGainSettings(DEFAULT_SETTINGS);
 let currentPercent = 100;
+let currentHostname = "";
+let isCurrentSiteEnabled = true;
 
 function updateLabel(percent) {
   valueLabel.textContent = `${percent}%`;
@@ -29,7 +34,12 @@ function updateLabel(percent) {
  * receives the same CustomEvent in the extension isolated world.
  */
 function broadcastGainToAllFrames(tabId, percent, gain, settings) {
-  const detailJson = JSON.stringify({ percent, gain, settings });
+  const detailJson = JSON.stringify({
+    percent,
+    gain,
+    settings,
+    enabled: isCurrentSiteEnabled,
+  });
   const code = `document.dispatchEvent(new CustomEvent(${JSON.stringify(
     GAIN_EVENT
   )},{detail:${detailJson}}));`;
@@ -75,10 +85,85 @@ function saveAndNotifyTab(percent, settings, options) {
     if (tab == null || tab.id === undefined) {
       return;
     }
-    broadcastGainToAllFrames(tab.id, percent, gain, payloadSettings).catch(() => {
-      /* restricted URLs, etc. */
-    });
+    broadcastGainToAllFrames(tab.id, percent, gain, payloadSettings).catch(
+      () => {
+        /* restricted URLs, etc. */
+      }
+    );
   });
+}
+
+function normalizeHostname(hostname) {
+  return String(hostname || "").trim().toLowerCase();
+}
+
+function parseDisabledHosts(input) {
+  if (!Array.isArray(input)) {
+    return [];
+  }
+  const seen = new Set();
+  const out = [];
+  for (const value of input) {
+    const host = normalizeHostname(value);
+    if (!host || seen.has(host)) {
+      continue;
+    }
+    seen.add(host);
+    out.push(host);
+  }
+  return out;
+}
+
+function getTabHostname(tab) {
+  try {
+    const rawUrl = tab && typeof tab.url === "string" ? tab.url : "";
+    if (!rawUrl) {
+      return "";
+    }
+    const parsed = new URL(rawUrl);
+    if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
+      return "";
+    }
+    return normalizeHostname(parsed.hostname);
+  } catch {
+    return "";
+  }
+}
+
+function updateSiteToggleUI() {
+  if (!currentHostname) {
+    siteEnabledToggle.checked = false;
+    siteEnabledToggle.disabled = true;
+    siteStatusText.textContent = "This tab cannot be controlled by the extension.";
+    return;
+  }
+  siteEnabledToggle.disabled = false;
+  siteEnabledToggle.checked = isCurrentSiteEnabled;
+  siteStatusText.textContent = `${currentHostname} is ${
+    isCurrentSiteEnabled ? "enabled" : "disabled"
+  }.`;
+}
+
+function persistSiteEnabled(enabled) {
+  if (!currentHostname) {
+    return Promise.resolve();
+  }
+  return browser.storage.local.get(DISABLED_HOSTS_KEY).then((stored) => {
+    const disabledHosts = parseDisabledHosts(stored[DISABLED_HOSTS_KEY]);
+    const filtered = disabledHosts.filter((host) => host !== currentHostname);
+    const next = enabled ? filtered : filtered.concat(currentHostname);
+    return browser.storage.local.set({ [DISABLED_HOSTS_KEY]: next });
+  });
+}
+
+function onSiteToggleChange() {
+  if (!currentHostname || siteEnabledToggle.disabled) {
+    return;
+  }
+  isCurrentSiteEnabled = Boolean(siteEnabledToggle.checked);
+  updateSiteToggleUI();
+  persistSiteEnabled(isCurrentSiteEnabled).catch(() => {});
+  saveAndNotifyTab(currentPercent, currentSettings, { persistPercent: false });
 }
 
 function onSliderInput() {
@@ -107,18 +192,33 @@ function onSettingsChange() {
 
 function onResetDefaults() {
   currentSettings = normalizeGainSettings(DEFAULT_SETTINGS);
+  isCurrentSiteEnabled = true;
   syncSettingsInputs(currentSettings);
+  updateSiteToggleUI();
   browser.storage.local.set({
     [NATIVE_MATCH_GAIN_KEY]: currentSettings.nativeMatchGain,
     [CURVE_EXPONENT_KEY]: currentSettings.curveExponent,
   });
+  persistSiteEnabled(true).catch(() => {});
   saveAndNotifyTab(currentPercent, currentSettings, { persistPercent: false });
 }
 
 document.addEventListener("DOMContentLoaded", () => {
-  browser.storage.local
-    .get([STORAGE_KEY, NATIVE_MATCH_GAIN_KEY, CURVE_EXPONENT_KEY])
-    .then((stored) => {
+  Promise.all([
+    browser.tabs.query({ active: true, currentWindow: true }),
+    browser.storage.local.get([
+      STORAGE_KEY,
+      NATIVE_MATCH_GAIN_KEY,
+      CURVE_EXPONENT_KEY,
+      DISABLED_HOSTS_KEY,
+    ]),
+  ]).then(([tabs, stored]) => {
+    const tab = tabs[0];
+    currentHostname = getTabHostname(tab);
+    const disabledHosts = parseDisabledHosts(stored[DISABLED_HOSTS_KEY]);
+    isCurrentSiteEnabled =
+      !currentHostname || !disabledHosts.includes(currentHostname);
+
     let percent = 100;
     if (
       typeof stored[STORAGE_KEY] === "number" &&
@@ -135,6 +235,7 @@ document.addEventListener("DOMContentLoaded", () => {
     slider.value = String(percent);
     updateLabel(percent);
     syncSettingsInputs(currentSettings);
+    updateSiteToggleUI();
     saveAndNotifyTab(percent, currentSettings, { persistPercent: true });
     setPanelState(false);
   });
@@ -145,6 +246,7 @@ document.addEventListener("DOMContentLoaded", () => {
   nativeMatchGainInput.addEventListener("change", onSettingsChange);
   curveExponentInput.addEventListener("input", onSettingsInput);
   curveExponentInput.addEventListener("change", onSettingsChange);
+  siteEnabledToggle.addEventListener("change", onSiteToggleChange);
   resetDefaultsBtn.addEventListener("click", onResetDefaults);
   settingsToggle.addEventListener("click", () => {
     const opening = !settingsPanel.classList.contains("active-panel");

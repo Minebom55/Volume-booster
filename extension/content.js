@@ -3,12 +3,17 @@
 const STORAGE_KEY = "volumePercent";
 const NATIVE_MATCH_GAIN_KEY = "nativeMatchGain";
 const CURVE_EXPONENT_KEY = "curveExponent";
+const DISABLED_HOSTS_KEY = "disabledHosts";
 const GAIN_EVENT = "__volumeBoosterSetGain";
 
 let audioContext = null;
 let currentGain = 1;
 let currentPercent = 100;
 let currentSettings = normalizeGainSettings(DEFAULT_SETTINGS);
+let isSiteEnabled = true;
+const currentHostname = String(window.location.hostname || "")
+  .trim()
+  .toLowerCase();
 /** @type {WeakMap<HTMLMediaElement, GainNode>} */
 const elementGainNodes = new WeakMap();
 /** @type {Set<GainNode>} */
@@ -62,16 +67,36 @@ function createMediaElementSourceNode(ctx, mediaElement) {
 function applyGainToAllNodes() {
   gainNodes.forEach((gainNode) => {
     try {
-      gainNode.gain.value = currentGain;
+      gainNode.gain.value = isSiteEnabled ? currentGain : 1;
     } catch {
       /* graph may be torn down after navigation */
     }
   });
 }
 
+function parseDisabledHosts(input) {
+  if (!Array.isArray(input)) {
+    return [];
+  }
+  const out = [];
+  const seen = new Set();
+  for (const value of input) {
+    const host = String(value || "").trim().toLowerCase();
+    if (!host || seen.has(host)) {
+      continue;
+    }
+    seen.add(host);
+    out.push(host);
+  }
+  return out;
+}
+
 function applyGainFromPayload(detail) {
   if (!detail) {
     return;
+  }
+  if (typeof detail.enabled === "boolean") {
+    isSiteEnabled = detail.enabled;
   }
   if (typeof detail.gain === "number" && Number.isFinite(detail.gain)) {
     currentGain = Number(detail.gain);
@@ -85,6 +110,9 @@ function applyGainFromPayload(detail) {
     currentGain = percentToGain(currentPercent, currentSettings);
   }
   resumeContextIfNeeded();
+  if (isSiteEnabled) {
+    scanDocumentMedia();
+  }
   applyGainToAllNodes();
 }
 
@@ -99,6 +127,9 @@ function wireMediaElement(el) {
       return;
     }
     if (elementGainNodes.has(media)) {
+      return;
+    }
+    if (!isSiteEnabled) {
       return;
     }
     if (!media.isConnected) {
@@ -229,7 +260,12 @@ function initFromStorage() {
     window.setInterval(scanDocumentMedia, 1500);
   }
   browser.storage.local
-    .get([STORAGE_KEY, NATIVE_MATCH_GAIN_KEY, CURVE_EXPONENT_KEY])
+    .get([
+      STORAGE_KEY,
+      NATIVE_MATCH_GAIN_KEY,
+      CURVE_EXPONENT_KEY,
+      DISABLED_HOSTS_KEY,
+    ])
     .then((stored) => {
     const v = stored[STORAGE_KEY];
     if (typeof v === "number" && v >= 100 && v <= 500) {
@@ -239,7 +275,13 @@ function initFromStorage() {
       nativeMatchGain: stored[NATIVE_MATCH_GAIN_KEY],
       curveExponent: stored[CURVE_EXPONENT_KEY],
     });
+    const disabledHosts = parseDisabledHosts(stored[DISABLED_HOSTS_KEY]);
+    isSiteEnabled =
+      !currentHostname || !disabledHosts.includes(currentHostname);
     currentGain = percentToGain(currentPercent, currentSettings);
+    if (isSiteEnabled) {
+      scanDocumentMedia();
+    }
     applyGainToAllNodes();
   });
 }
@@ -268,6 +310,15 @@ browser.storage.onChanged.addListener((changes, areaName) => {
         ? changes[CURVE_EXPONENT_KEY].newValue
         : currentSettings.curveExponent,
     });
+    shouldRecalc = true;
+  }
+  if (changes[DISABLED_HOSTS_KEY]) {
+    const disabledHosts = parseDisabledHosts(changes[DISABLED_HOSTS_KEY].newValue);
+    isSiteEnabled =
+      !currentHostname || !disabledHosts.includes(currentHostname);
+    if (isSiteEnabled) {
+      scanDocumentMedia();
+    }
     shouldRecalc = true;
   }
   if (shouldRecalc) {
