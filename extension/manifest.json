@@ -12,7 +12,7 @@
       }
     }
   },
-  "permissions": ["activeTab", "tabs", "storage"],
+  "permissions": ["<all_urls>", "activeTab", "tabs", "storage"],
   "icons": {
     "48": "icon.svg",
     "96": "icon.svg"
@@ -24,12 +24,7 @@
       "32": "icon.svg"
     }
   },
-  "content_scripts": [
-    {
-      "matches": ["<all_urls>"],
-      "js": ["gain-map.js", "content.js"],
-      "run_at": "document_idle",
-      "all_frames": true
-    }
-  ]
+  "background": {
+    "scripts": ["background.js"]
+  }
 }

@@ -185,9 +185,9 @@ function updateSiteToggleUI() {
   }
   siteEnabledToggle.disabled = false;
   siteEnabledToggle.checked = isCurrentSiteEnabled;
-  siteStatusText.textContent = `${currentHostname} is ${
-    isCurrentSiteEnabled ? "enabled" : "disabled"
-  }.`;
+  siteStatusText.textContent = isCurrentSiteEnabled
+    ? `${currentHostname} will allow extension injection.`
+    : `${currentHostname} is excluded and will not inject after reload.`;
 }
 
 function persistSiteEnabled(enabled) {
