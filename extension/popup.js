@@ -17,11 +17,14 @@ const curveExponentInput = document.getElementById("curveExponentInput");
 const resetDefaultsBtn = document.getElementById("resetDefaultsBtn");
 const siteEnabledToggle = document.getElementById("siteEnabledToggle");
 const siteStatusText = document.getElementById("siteStatusText");
+const refreshNotice = document.getElementById("refreshNotice");
+const refreshButton = document.getElementById("refreshButton");
 
 let currentSettings = normalizeGainSettings(DEFAULT_SETTINGS);
 let currentPercent = 100;
 let currentHostname = "";
 let isCurrentSiteEnabled = true;
+let needsRefresh = false;
 
 function updateLabel(percent) {
   valueLabel.textContent = `${percent}%`;
@@ -97,6 +100,43 @@ function normalizeHostname(hostname) {
   return String(hostname || "").trim().toLowerCase();
 }
 
+function normalizeHostEntry(value) {
+  const raw = String(value || "").trim().toLowerCase();
+  if (!raw) {
+    return "";
+  }
+
+  let host = "";
+  try {
+    host = new URL(raw).hostname;
+  } catch {
+    try {
+      host = new URL(`https://${raw}`).hostname;
+    } catch {
+      host = raw;
+    }
+  }
+
+  host = String(host || "").trim().toLowerCase();
+  host = host.split("/")[0].split("?")[0].split("#")[0];
+  if (host.includes("@")) {
+    host = host.split("@").pop() || "";
+  }
+  if (host.includes(":")) {
+    host = host.split(":")[0];
+  }
+  while (host.startsWith(".")) {
+    host = host.slice(1);
+  }
+  while (host.endsWith(".")) {
+    host = host.slice(0, -1);
+  }
+  if (!/^[a-z0-9.-]+$/.test(host)) {
+    return "";
+  }
+  return host;
+}
+
 function parseDisabledHosts(input) {
   if (!Array.isArray(input)) {
     return [];
@@ -104,7 +144,7 @@ function parseDisabledHosts(input) {
   const seen = new Set();
   const out = [];
   for (const value of input) {
-    const host = normalizeHostname(value);
+    const host = normalizeHostEntry(value);
     if (!host || seen.has(host)) {
       continue;
     }
@@ -112,6 +152,11 @@ function parseDisabledHosts(input) {
     out.push(host);
   }
   return out;
+}
+
+function setNeedsRefresh(value) {
+  needsRefresh = Boolean(value);
+  refreshNotice.hidden = !needsRefresh;
 }
 
 function getTabHostname(tab) {
@@ -135,6 +180,7 @@ function updateSiteToggleUI() {
     siteEnabledToggle.checked = false;
     siteEnabledToggle.disabled = true;
     siteStatusText.textContent = "This tab cannot be controlled by the extension.";
+    setNeedsRefresh(false);
     return;
   }
   siteEnabledToggle.disabled = false;
@@ -162,6 +208,7 @@ function onSiteToggleChange() {
   }
   isCurrentSiteEnabled = Boolean(siteEnabledToggle.checked);
   updateSiteToggleUI();
+  setNeedsRefresh(true);
   persistSiteEnabled(isCurrentSiteEnabled).catch(() => {});
   saveAndNotifyTab(currentPercent, currentSettings, { persistPercent: false });
 }
@@ -195,6 +242,7 @@ function onResetDefaults() {
   isCurrentSiteEnabled = true;
   syncSettingsInputs(currentSettings);
   updateSiteToggleUI();
+  setNeedsRefresh(true);
   browser.storage.local.set({
     [NATIVE_MATCH_GAIN_KEY]: currentSettings.nativeMatchGain,
     [CURVE_EXPONENT_KEY]: currentSettings.curveExponent,
@@ -236,6 +284,7 @@ document.addEventListener("DOMContentLoaded", () => {
     updateLabel(percent);
     syncSettingsInputs(currentSettings);
     updateSiteToggleUI();
+    setNeedsRefresh(false);
     saveAndNotifyTab(percent, currentSettings, { persistPercent: true });
     setPanelState(false);
   });
@@ -247,6 +296,16 @@ document.addEventListener("DOMContentLoaded", () => {
   curveExponentInput.addEventListener("input", onSettingsInput);
   curveExponentInput.addEventListener("change", onSettingsChange);
   siteEnabledToggle.addEventListener("change", onSiteToggleChange);
+  refreshButton.addEventListener("click", () => {
+    browser.tabs.query({ active: true, currentWindow: true }).then((tabs) => {
+      const tab = tabs[0];
+      if (tab == null || tab.id === undefined) {
+        return;
+      }
+      browser.tabs.reload(tab.id).catch(() => {});
+      setNeedsRefresh(false);
+    });
+  });
   resetDefaultsBtn.addEventListener("click", onResetDefaults);
   settingsToggle.addEventListener("click", () => {
     const opening = !settingsPanel.classList.contains("active-panel");

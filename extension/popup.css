@@ -178,6 +178,21 @@ body {
   line-height: 1.35;
 }
 
+.refresh-notice {
+  margin-top: 8px;
+  padding: 8px;
+  border-radius: 8px;
+  border: 1px solid rgba(124, 158, 255, 0.28);
+  background: rgba(124, 158, 255, 0.08);
+}
+
+.refresh-text {
+  margin: 0 0 8px;
+  color: #dbe1ea;
+  font-size: 11px;
+  line-height: 1.35;
+}
+
 .setting-label {
   display: flex;
   align-items: center;

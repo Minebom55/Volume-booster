@@ -81,7 +81,7 @@ function parseDisabledHosts(input) {
   const out = [];
   const seen = new Set();
   for (const value of input) {
-    const host = String(value || "").trim().toLowerCase();
+    const host = normalizeHostEntry(value);
     if (!host || seen.has(host)) {
       continue;
     }
@@ -89,6 +89,43 @@ function parseDisabledHosts(input) {
     out.push(host);
   }
   return out;
+}
+
+function normalizeHostEntry(value) {
+  const raw = String(value || "").trim().toLowerCase();
+  if (!raw) {
+    return "";
+  }
+
+  let host = "";
+  try {
+    host = new URL(raw).hostname;
+  } catch {
+    try {
+      host = new URL(`https://${raw}`).hostname;
+    } catch {
+      host = raw;
+    }
+  }
+
+  host = String(host || "").trim().toLowerCase();
+  host = host.split("/")[0].split("?")[0].split("#")[0];
+  if (host.includes("@")) {
+    host = host.split("@").pop() || "";
+  }
+  if (host.includes(":")) {
+    host = host.split(":")[0];
+  }
+  while (host.startsWith(".")) {
+    host = host.slice(1);
+  }
+  while (host.endsWith(".")) {
+    host = host.slice(0, -1);
+  }
+  if (!/^[a-z0-9.-]+$/.test(host)) {
+    return "";
+  }
+  return host;
 }
 
 function applyGainFromPayload(detail) {
